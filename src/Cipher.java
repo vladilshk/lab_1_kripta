@@ -1,4 +1,6 @@
 import java.io.*;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Random;
@@ -6,13 +8,13 @@ import java.util.TreeMap;
 
 public class Cipher {
     public String coding(String message) throws IOException {
-        Map<Integer, String> codingAlphabet = getAlphabetForCoding();
+        Map<Character, String> codingAlphabet = getAlphabetForCoding();
         message = message.toLowerCase();
         StringBuilder codingMessage = new StringBuilder();
         for (int i = 0; i < message.length(); i++) {
             int symbolNum = (int) message.charAt(i);
-            if(symbolNum > 96 && symbolNum < 123){
-                codingMessage.append(codingAlphabet.get(symbolNum - 97));
+            if(codingAlphabet.containsKey(message.charAt(i))){
+                codingMessage.append(codingAlphabet.get(message.charAt(i)));
             }
             else{
                 codingMessage.append(message.charAt(i));
@@ -22,7 +24,7 @@ public class Cipher {
     }
 
     public String deCoding(String message) throws IOException {
-        Map<String, Integer> decodingAlphabet = getAlphabetForDecoding();
+        Map<String, Character> decodingAlphabet = getAlphabetForDecoding();
         StringBuilder decodingMessage = new StringBuilder();
         for (int i = 0; i < message.length(); i += 2) {
             if((int)message.charAt(i) > 122 || (int)message.charAt(i) < 97){
@@ -31,14 +33,14 @@ public class Cipher {
             }
             else {
                 String letter = String.valueOf(message.charAt(i)) + String.valueOf(message.charAt(i + 1));
-                decodingMessage.append((char)(decodingAlphabet.get(letter) + 'a'));
+                decodingMessage.append(decodingAlphabet.get(letter));
             }
         }
         return decodingMessage.toString();
     }
 
     public void createAlphabet() throws IOException {
-        Map<Integer, String> codingAlphabet = new LinkedHashMap<>();
+        Map<Character, String> codingAlphabet = new LinkedHashMap<>();
         Random random = new Random();
         for (int i = 0; i < 26; i++) {
             while (true){
@@ -47,7 +49,7 @@ public class Cipher {
                 String symbol = String.valueOf(firstSymbol) + String.valueOf(secondSymbol);
 
                 if(!codingAlphabet.containsValue(symbol)){
-                    codingAlphabet.put(i, symbol);
+                    codingAlphabet.put((char)(i + 'a'), symbol);
                     break;
                 }
             }
@@ -58,57 +60,60 @@ public class Cipher {
         fileWriter.close();
     }
 
-    public Map<String, Integer> getAlphabetForDecoding() throws IOException {
+    public Map<String, Character> getAlphabetForDecoding() throws IOException {
         FileReader fileReader = new FileReader("alphabet");
         char[] buffer = new char[1024];
         fileReader.read(buffer);
         fileReader.close();
-        Map<String, Integer> alphabet = new LinkedHashMap<>();
+        Map<String, Character> alphabet = new LinkedHashMap<>();
         int i = 1;
-        while (buffer[i + 7] != '}'){
-            alphabet.put(String.valueOf(buffer[i+2]) + String.valueOf(buffer[i+3]), (int)buffer[i] - 48);
+        while (true){
+            alphabet.put(String.valueOf(buffer[i+2]) + String.valueOf(buffer[i+3]), buffer[i]);
             i += 6;
-            if(i == 61)
+            if(buffer[i -2] == '}'){
                 break;
-        }
-        while (buffer[i -2] != '}'){
-            alphabet.put(String.valueOf(buffer[i+3]) + String.valueOf(buffer[i+4]), (int)(buffer[i] -48) * 10 + (int)buffer[i+1] - 48);
-            i += 7;
+            }
         }
         return alphabet;
     }
 
-    public Map<Integer, String> getAlphabetForCoding() throws IOException {
+    public Map<Character, String> getAlphabetForCoding() throws IOException {
         FileReader fileReader = new FileReader("alphabet");
         char[] buffer = new char[1024];
         fileReader.read(buffer);
         fileReader.close();
-        Map<Integer, String> alphabet = new LinkedHashMap<>();
+        Map<Character, String> alphabet = new LinkedHashMap<>();
         int i = 1;
-        while (buffer[i + 7] != '}'){
-            alphabet.put((int)buffer[i] - 48, String.valueOf(buffer[i+2]) + String.valueOf(buffer[i+3]));
+        while (true){
+            alphabet.put(buffer[i], String.valueOf(buffer[i+2]) + String.valueOf(buffer[i+3]));
             i += 6;
-            if(i == 61)
+            if(buffer[i -2] == '}'){
                 break;
-        }
-        while (buffer[i -2] != '}'){
-            alphabet.put((int)(buffer[i] -48) * 10 + (int)buffer[i+1] - 48,  String.valueOf(buffer[i+3]) + String.valueOf(buffer[i+4]));
-            i += 7;
+            }
         }
         return alphabet;
     }
 
     public String frequencyAnalysis(String message){
-        Map<Character, Integer> letters = new LinkedHashMap<>();
+        Map<Character, Double> letters = new LinkedHashMap<>();
         for (int i = 0; i < 26; i++) {
-            letters.put((char)((i) + 'a'), 0);
+            letters.put((char)((i) + 'a'), (double) 0);
         }
+
         for (int i = 0; i < message.length(); i++) {
             if(letters.containsKey(message.charAt(i))){
-                letters.put(message.charAt(i), letters.get(message.charAt(i)) + 1);
+                letters.put(message.charAt(i), letters.get(message.charAt(i)) + 1.0);
             }
         }
-        return letters.toString();
+
+        StringBuilder st = new StringBuilder();
+        NumberFormat nf = new DecimalFormat("#.##");
+        for(Character key : letters.keySet()){
+            letters.put(key,  letters.get(key) / message.length());
+            st.append(key + " = " + nf.format(letters.get(key)));
+            st.append("; ");
+        }
+        return st.toString();
     }
 
 
